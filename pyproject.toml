@@ -21,5 +21,3 @@ dependencies = [
     "xgboost>=2.0.0",
 ]
 
-[tool.poetry]
-package-mode = false
