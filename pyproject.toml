@@ -20,5 +20,8 @@ dependencies = [
     "tqdm>=4.67.1",
     "vizdoom>=1.2.4",
     "xgboost>=2.0.0",
+    "imblearn (>=0.0,<0.1)"
 ]
 
+[tool.poetry]
+package-mode = false
