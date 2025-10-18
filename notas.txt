@@ -1,9 +1,0 @@
-Para discutir
-- Los graficos les parecen adecuados? o agreagarian/quitarian alguno?
-- ¿Qué otras variables podrían ser útiles para mejorar el modelo? Falta adaptar las metricas que usó Carlos
-- Eliminar los partidos amistosos les parece adecuado? Deberiamos considerar solo los torneos mas importantes?
-- La codificación de las variables categoricas les parece adecuada? Use TargetEncoder por simplcidad.
-- El split temporal les parece adecuado? Parece tener sentido
-- Faltaria agregar los algoritmos XGBoost/LightGBM y Redes Neuronales
-
-- Y si convertimos el problema a uno de clasificación binaria (win vs no win)? Podria simplificar el problema y mejorar los resultados

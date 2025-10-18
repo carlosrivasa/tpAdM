@@ -13,8 +13,8 @@ Este repositorio contiene el material de resolución del trabajo práctico corre
 - [SIU a2227] Carlos Alberto Rivas Araque <carlos.rivas.a@gmail.com>
 
 ## Solución en los siguientes notebooks
-- [FIFA2026.ipynb](FIFA2026.ipynb)
-- [FIFA2026_win_nowin.ipynb](FIFA2026_win_nowin.ipynb)
+- [FIFA2026.ipynb](FIFA2026.ipynb) - Predicciones iniciales
+- [FIFA2026_win_nowin.ipynb](FIFA2026_win_nowin.ipynb) - Predicciones definitivas
 
 <br>
 
