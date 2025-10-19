@@ -24,6 +24,9 @@ Este repositorio contiene el material de resolución del trabajo práctico corre
 - Numpy, Pandas, SciPy
 - Matplotlib, Seaborn
 - Scikit-Learn
+- Category_encoders
+- Fastparquet
+- Os
 
 # Instalación del entorno
 

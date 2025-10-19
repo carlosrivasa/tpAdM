@@ -20,5 +20,6 @@ dependencies = [
     "tqdm>=4.67.1",
     "vizdoom>=1.2.4",
     "xgboost>=2.0.0",
+    "fastparquet>=2024.11.0",
 ]
 
