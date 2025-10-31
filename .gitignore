@@ -21,6 +21,6 @@ venv.bak/
 .DS_Store
 */.DS_Store
 
-# Codigo
-/trabajo_practico2/
-/trabajo_practico3/
+# output
+output/
+models/
