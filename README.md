@@ -4,13 +4,16 @@
 
 <br>
 
-# Aprendizaje de Máquina
-Este repositorio contiene el material de resolución del trabajo práctico correspondientes al grupo.
+# Operaciones de aprendizaje de máquina
+Este repositorio contiene el material de resolución del trabajo práctico final de la materia.
 
 ## Integrantes
 - [SIU a2221] Cesar Octavio Mejia <cemejia555@gmail.com>
 - [SIU a2222] Osvaldo Daniel Muñoz <ossiemunoz@gmail.com>
 - [SIU a2227] Carlos Alberto Rivas Araque <carlos.rivas.a@gmail.com>
+- [SIU a2208] Ariel Matias Cabello <arielmcabello@gmail.com>
+- [SIU a2213] Ignacio Agustin Costarelli <agustin@costarellisa.com.ar>
+- [SIU a2214] Alex Martín Curellich <alexcurellich@gmail.com>
 
 ## Solución en los siguientes notebooks
 - [FIFA2026.ipynb](FIFA2026.ipynb) - Predicciones iniciales
