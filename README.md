@@ -84,3 +84,18 @@ poetry run jupyter lab
 # Con pip (entorno virtual activado)
 jupyter lab
 ```
+
+## Componentes
+
+Con el objetivo de realizar el despliegue, el código está dividido en los siguientes componentes:
+
+- `refactor/etl.py`: ETL para cargar y preprocesar los datos.
+- `refactor/train_model.py`: Entrenamiento del modelo.
+- `refactor/test_model.py`: Testeo del modelo.
+
+```bash
+# Con Poetry
+poetry run refactor/etl.py
+poetry run refactor/train_model.py
+poetry run refactor/test_model.py
+```
