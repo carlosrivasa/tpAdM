@@ -10,7 +10,7 @@ from math import log
 
 from pathlib import Path
 
-def load_data_from_source(path: str, filename: str, min_year: int = 1920) -> pd.DataFrame:
+def load_data_from_source(path: str, filename: str) -> pd.DataFrame:
     """
     Carga los datos crudos del archivo de resultados de partidos.
 
@@ -30,6 +30,8 @@ def preprocess_features(results: pd.DataFrame, min_year: int = 1920) -> pd.DataF
 
     :param dataset: Dataframe con el dataset
     :type dataset: pd.DataFrame
+    :param min_year: Año mínimo para filtrar los datos
+    :type min_year: int
     :returns: Dataset con las características preprocesadas
     :rtype: pd.DataFrame
     """
@@ -74,13 +76,18 @@ def select_features(
     target_column: str
 ) -> pd.DataFrame:
     """
-    Selects the specified features for modeling.
+    Selecciona las características especificadas para el modelado.
     
-    :param data: DataFrame containing all features
-    :param numerical_features: List of numerical feature names to include
-    :param categorical_features: List of categorical feature names to include
-    :param target_column: Name of the target column
-    :return: DataFrame with only the selected features
+    :param data: DataFrame con el dataset
+    :type data: pd.DataFrame
+    :param numerical_features: Lista de nombres de características numéricas a incluir
+    :type numerical_features: list
+    :param categorical_features: Lista de nombres de características categóricas a incluir
+    :type categorical_features: list
+    :param target_column: Nombre de la columna target
+    :type target_column: str
+    :return: DataFrame con las características seleccionadas
+    :type: pd.DataFrame
     """
     # Combine all features we want to keep
     features_to_keep = numerical_features + categorical_features + [target_column]
@@ -90,7 +97,11 @@ def select_features(
     return data[features_to_keep]
 
 
-def make_dummies_variables(dataset: pd.DataFrame, categories_list: list, target_column: str = 'target') -> pd.DataFrame:
+def make_dummies_variables(
+    dataset: pd.DataFrame,
+    categories_list: list,
+    target_column: str = 'target'
+    ) -> pd.DataFrame:
     """
     Converts categorical variables using target encoding.
 
@@ -104,19 +115,18 @@ def make_dummies_variables(dataset: pd.DataFrame, categories_list: list, target_
     :rtype: pd.DataFrame
     """
 
-    
-    # Make a copy to avoid modifying the original dataframe
+    # Copiar el dataset para evitar modificar el original
     encoded_data = dataset.copy()
     
-    # Initialize the target encoder
+    # Inicializar el target encoder
     encoder = ce.TargetEncoder(handle_missing='value', handle_unknown='value')
     
-    # Apply target encoding to each categorical column
+    # Aplicar target encoding a las columnas categóricas
     for col in categories_list:
         if col in encoded_data.columns:
             encoded_data[col] = encoder.fit_transform(encoded_data[col], encoded_data[target_column])
     
-    # Log the transformed columns
+    # Log de las nuevas columnas
     Path("./output").mkdir(exist_ok=True)
     with open("./output/log_columns_dummies.txt", "w") as f:
         f.write("New columns after target encoding:\n")
@@ -125,8 +135,12 @@ def make_dummies_variables(dataset: pd.DataFrame, categories_list: list, target_
     return encoded_data
 
 
-def split_dataset(dataset: pd.DataFrame, test_size: float,
-                 target_column: str, is_stratified: bool = True) -> tuple:
+def split_dataset(
+    dataset: pd.DataFrame,
+    test_size: float,
+    target_column: str,
+    is_stratified: bool = True
+    ) -> tuple:
     """
     Divide el dataset en conjuntos de entrenamiento y prueba.
 

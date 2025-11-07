@@ -5,7 +5,7 @@ from pathlib import Path
 
 def load_training_data(X_train_path, y_train_path):
     """
-    Load training dataset from CSV files.
+    Carge el train set desde archivos CSV.
     
     Args:
         X_train_path: Path to the training features CSV file
@@ -20,7 +20,7 @@ def load_training_data(X_train_path, y_train_path):
 
 def train_model(X_train, y_train):
     """
-    Train the RandomForest model with fixed parameters.
+    Entrenamiento del modelo RandomForest model con parámetros fijos.
     
     Args:
         X_train: Training features

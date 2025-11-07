@@ -6,7 +6,7 @@ from sklearn.metrics import f1_score, RocCurveDisplay
 
 def load_datasets(path_X_test: str, path_y_test: str) -> tuple:
     """
-    Carga el dataset de testeo, tanto las entradas como las salidas
+    Carga el test set, tanto las entradas como las salidas
 
     :param path_X_test: String con el path del csv con las entradas de testeo
     :type path_X_test: str
