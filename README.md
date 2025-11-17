@@ -29,6 +29,8 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 
 # Instalación del entorno
 
+Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el de tu usuario o alguno que consideres oportuno (para encontrar el UID, usa el comando `id -u <username>`). De lo contrario, Airflow dejará sus carpetas internas como root y no podrás subir DAGs (en `airflow/dags`) o plugins, etc.
+
 # Crear los directorios necesarios
 mkdir -p airflow/{dags,logs,config,plugins,secrets}
 
@@ -53,7 +55,7 @@ docker logs mlflow
 
 # Importante a continuación:
 Entrar a MinIO y subir el archivo archives/results.csv en el bucket data, carpeta "datasets"
-También se crean en el bucket data las carpetas  
+También se crean en el bucket data las carpetas output y processed  
 
 ## Componentes dentro de airflow
 
