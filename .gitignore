@@ -12,7 +12,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.env
+.env/
 
 # Visual Studio Code settings
 .vscode/
@@ -24,3 +24,5 @@ venv.bak/
 # output
 output/
 models/
+
+airflow/logs

@@ -74,7 +74,7 @@ def obtain_ROC_curve(model, X_test, y_test):
 
 
 # Testeamos el modelo
-X_test, y_test = load_datasets("./output/X_test_scaled.csv", "./output/y_test.csv")
+X_test, y_test = load_datasets("./data/processed/X_test_scaled.csv", "./data/processed/y_test.csv")
 model = load_model("./models/best_rf_model.pkl")
 test_model_f1(model, X_test, y_test)
 obtain_ROC_curve(model, X_test, y_test)

@@ -1,30 +1,79 @@
 import pandas as pd
 import numpy as np
+import category_encoders as ce
+import mlflow
+
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-
-import category_encoders as ce
-    
 from collections import deque
 from math import log
+import logging
+import boto3
+from io import StringIO
 
-from pathlib import Path
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def load_data_from_source(path: str, filename: str) -> pd.DataFrame:
+MIN_YEAR = 1920
+TEST_SIZE = 0.2
+RANDOM_STATE = 42
+
+def load_data_from_s3(bucket: str, key: str) -> pd.DataFrame:
+    s3 = boto3.client('s3',
+                     endpoint_url='http://s3:9000',
+                     aws_access_key_id='minio',
+                     aws_secret_access_key='minio123')
+    obj = s3.get_object(Bucket=bucket, Key=key)
+    return pd.read_csv(StringIO(obj['Body'].read().decode('utf-8')))
+
+def save_df_to_s3(df: pd.DataFrame, bucket: str, key: str) -> None:
     """
-    Carga los datos crudos del archivo de resultados de partidos.
+    Save a DataFrame to an S3 bucket as a CSV file.
 
-    :param path: Ruta donde está ubicado el archivo CSV con los datos
-    :type path: str
-    :param filename: Nombre del archivo CSV
-    :type filename: str
-    :returns: DataFrame con los datos de los partidos
-    :rtype: pd.DataFrame
+    :param df: DataFrame to save
+    :param bucket: S3 bucket name
+    :param key: S3 object key (path + filename)
     """
-    # Cargar los datos
-    return pd.read_csv(path + filename)
+    s3 = boto3.client('s3',
+                     endpoint_url='http://s3:9000',
+                     aws_access_key_id='minio',
+                     aws_secret_access_key='minio123')
+    
+    # Convert DataFrame to CSV in memory
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False)
+    
+    # Upload to S3
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=csv_buffer.getvalue()
+    )
+    logger.info(f"Successfully saved DataFrame to s3://{bucket}/{key}")
 
-def preprocess_features(results: pd.DataFrame, min_year: int = 1920) -> pd.DataFrame:
+def save_text_to_s3(content: str, bucket: str, key: str) -> None:
+    """
+    Save text content to an S3 bucket.
+
+    :param content: Text content to save
+    :param bucket: S3 bucket name
+    :param key: S3 object key (path + filename)
+    """
+    s3 = boto3.client('s3',
+                     endpoint_url='http://s3:9000',
+                     aws_access_key_id='minio',
+                     aws_secret_access_key='minio123')
+    
+    # Upload text content to S3
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=content.encode('utf-8'),
+        ContentType='text/plain'
+    )
+    logger.info(f"Successfully saved text to s3://{bucket}/{key}")
+    
+def preprocess_features(results: pd.DataFrame, min_year: int = MIN_YEAR) -> pd.DataFrame:
     """
     Preprocesa las características del dataset.
 
@@ -127,10 +176,8 @@ def make_dummies_variables(
             encoded_data[col] = encoder.fit_transform(encoded_data[col], encoded_data[target_column])
     
     # Log de las nuevas columnas
-    Path("./output").mkdir(exist_ok=True)
-    with open("./output/log_columns_dummies.txt", "w") as f:
-        f.write("New columns after target encoding:\n")
-        f.write("\n".join(encoded_data.columns.tolist()))
+    content = "New columns after target encoding:\n" + "\n".join(encoded_data.columns.tolist())
+    save_text_to_s3(content, "data", "output/log_columns_dummies.txt")
     
     return encoded_data
 
@@ -167,12 +214,6 @@ def split_dataset(
             X, y, test_size=test_size, random_state=42
         )
     
-    # Guardar los conjuntos de datos
-    X_train.to_csv("./output/X_train.csv", index=False)
-    X_test.to_csv("./output/X_test.csv", index=False)
-    y_train.to_csv("./output/y_train.csv", index=False)
-    y_test.to_csv("./output/y_test.csv", index=False)
-    
     return X_train, X_test, y_train, y_test
 
 
@@ -199,10 +240,6 @@ def standardize_inputs(X_train: pd.DataFrame, X_test: pd.DataFrame) -> tuple:
     
     X_train_scaled[numeric_columns] = scaler.fit_transform(X_train[numeric_columns])
     X_test_scaled[numeric_columns] = scaler.transform(X_test[numeric_columns])
-    
-    # Guardar los conjuntos escalados
-    X_train_scaled.to_csv("./output/X_train_scaled.csv", index=False)
-    X_test_scaled.to_csv("./output/X_test_scaled.csv", index=False)
     
     return X_train_scaled, X_test_scaled
 
@@ -283,35 +320,111 @@ def compute_elo_features(df: pd.DataFrame) -> pd.DataFrame:
     elo_df = pd.DataFrame(snapshots)
     elo_df["rating_diff"] = elo_df["home_rating"] - elo_df["away_rating"]
     return elo_df
+
+
+def setup_mlflow(experiment_name="etl_ml_pipeline"):
+    # Conectar con el servidor MLflow
+    mlflow.set_tracking_uri("http://mlflow:5000")
+    
+    # Crear o obtener el experimento
+    experiment = mlflow.get_experiment_by_name(experiment_name)
+    if experiment is None:
+        experiment_id = mlflow.create_experiment(
+            experiment_name,
+            tags={
+                "project":"fifa-2026-win-nowin",
+                "team":"mlops1-fiuba" 
+                }
+            )
+    else:
+        experiment_id = experiment.experiment_id
+        
+    mlflow.set_experiment(experiment_name=experiment_name)
+    return experiment_id
+
+def main():
+    experiment_id = setup_mlflow()
+    
+    with mlflow.start_run(experiment_id=experiment_id, run_name="fifa_etl_pipeline"):
+
+        print("1. Loading and preprocessing data...")
+        data = load_data_from_s3("data", "datasets/results.csv") # file in archive
+        data = preprocess_features(data)
+        
+        # Log parameters
+        mlflow.log_param("min_year", MIN_YEAR)
+        mlflow.log_param("test_size", TEST_SIZE)
+        mlflow.log_param("random_state", RANDOM_STATE)
+        
+        print("2. Processing features...")
+        numerical_features = ["neutral", "year", "month", "dayofweek", "rating_diff"]
+        categorical_features = ["home_team", "away_team", "tournament"]
+        target_column = "target"
+        
+        # Log feature information
+        mlflow.log_param("numerical_features", numerical_features)
+        mlflow.log_param("categorical_features", categorical_features)
+        
+        # Select features
+        selected_data = select_features(
+            data,
+            numerical_features=numerical_features,
+            categorical_features=categorical_features,
+            target_column=target_column
+        )
+        
+        # Process categorical variables
+        data_with_dummies = make_dummies_variables(selected_data, categorical_features)
+        
+        # 3. Split data
+        print("3 Splitting dataset...")
+        X_train, X_test, y_train, y_test = split_dataset(
+            data_with_dummies, 
+            test_size=0.2, 
+            target_column=target_column
+        )
+        
+        # 4. Standardize features
+        print("4. Standardizing features...")
+        X_train_scaled, X_test_scaled = standardize_inputs(X_train, X_test)
+        
+        # 5. Save processed data
+        print("5. Saving processed data...")
+        
+        # Save the DataFrames to S3
+        save_df_to_s3(X_train, "data", "processed/X_train.csv")
+        save_df_to_s3(X_test, "data", "processed/X_test.csv")
+        save_df_to_s3(y_train, "data", "processed/y_train.csv")
+        save_df_to_s3(y_test, "data", "processed/y_test.csv")
+        save_df_to_s3(X_train_scaled, "data", "processed/X_train_scaled.csv")
+        save_df_to_s3(X_test_scaled, "data", "processed/X_test_scaled.csv")
+        
+        # Log metrics
+        mlflow.log_metric("train_samples", len(X_train))
+        mlflow.log_metric("test_samples", len(X_test))
+        mlflow.log_metric("class_balance", y_train.mean())
+        
+        # Log artifacts
+        # Log S3 locations to MLflow
+        s3_base = "s3://data"
+        mlflow.log_param("s3_train_data", f"{s3_base}/processed/X_train.csv")
+        mlflow.log_param("s3_test_data", f"{s3_base}/processed/X_test.csv")
+        mlflow.log_param("s3_train_labels", f"{s3_base}/processed/y_train.csv")
+        mlflow.log_param("s3_test_labels", f"{s3_base}/processed/y_test.csv")
+        mlflow.log_param("s3_train_scaled", f"{s3_base}/processed/X_train_scaled.csv")
+        mlflow.log_param("s3_test_scaled", f"{s3_base}/processed/X_test_scaled.csv")
+        mlflow.log_param("s3_log_columns_dummies", "s3://data/output/log_columns_dummies.txt")
+        
+        print("ETL pipeline completed successfully!")
+        return {
+            "X_train": X_train_scaled,
+            "X_test": X_test_scaled,
+            "y_train": y_train,
+            "y_test": y_test
+        }
     
 if __name__ == "__main__":
-    # Load and preprocess data
-    data = load_data_from_source("./archive/", "results.csv")
-    data = preprocess_features(data)
     
-    numerical_features = ["neutral", "year", "month", "dayofweek", "rating_diff"]
-    categorical_features = ["home_team", "away_team", "tournament"]
-    target_column = "target"
-
-    # Convert categorical variables
-
-    # 3. Select only the features we need
-    data = select_features(
-        data,
-        numerical_features=numerical_features,
-        categorical_features=categorical_features,
-        target_column=target_column
-    )
-
-    data = make_dummies_variables(data, categorical_features)
-    
-    # Split into training and test sets
-    X_train, X_test, y_train, y_test = split_dataset(
-        data, test_size=0.2, target_column="target"
-    )
-    
-    # Standardize features
-    X_train_scaled, X_test_scaled = standardize_inputs(X_train, X_test)
-    
-    print("X_train_scaled:", X_test_scaled.head())
+    # Run the pipeline
+    main()
         

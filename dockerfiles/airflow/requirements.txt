@@ -1,0 +1,14 @@
+mlflow[extras]
+boto3
+category-encoders
+matplotlib
+numpy
+pandas
+pyarrow
+pygame
+scikit-learn
+scipy
+seaborn
+tqdm
+vizdoom
+xgboost
