@@ -47,8 +47,8 @@ def train_model(X_train, y_train):
 if __name__ == "__main__":
     
     base_path = Path(__file__).parent.parent 
-    X_train_path = base_path / 'output' / 'X_train_scaled.csv'
-    y_train_path = base_path / 'output' / 'y_train.csv'
+    X_train_path = base_path / 'data/' / 'processed' / 'X_train_scaled.csv'
+    y_train_path = base_path / 'data/' / 'processed' / 'y_train.csv'
     model_path = base_path / 'models' / 'best_rf_model.pkl'
     
     # Create models directory if it doesn't exist

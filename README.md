@@ -15,87 +15,58 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 - [SIU a2213] Ignacio Agustin Costarelli <agustin@costarellisa.com.ar>
 - [SIU a2214] Alex Martín Curellich <alexcurellich@gmail.com>
 
-## Solución en los siguientes notebooks
-- [FIFA2026.ipynb](FIFA2026.ipynb) - Predicciones iniciales
-- [FIFA2026_win_nowin.ipynb](FIFA2026_win_nowin.ipynb) - Predicciones definitivas
+## Pase a producción de un modelo de predicciones (win no win) de partidos de futbol de selecciones nacionales
+- [FIFA2026_win_nowin.ipynb](notebook_examples/FIFA2026_win_nowin.ipynb) - Predicciones definitivas
 
 <br>
 
 # Requerimientos
-- Python >=3.11,<3.13 (requerido por vizdoom)
-- uv / Poetry / Pip / Conda
+- Docker, Airflow, MLflow, MinIO, FastAPI, Redis, 
+- Python >=3.11,<3.13 (requerido por vizdoom)  
 - Numpy, Pandas, SciPy
 - Matplotlib, Seaborn
 - Scikit-Learn
 
 # Instalación del entorno
 
-## Usando Poetry (Recomendado)
+Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el de tu usuario o alguno que consideres oportuno (para encontrar el UID, usa el comando `id -u <username>`). De lo contrario, Airflow dejará sus carpetas internas como root y no podrás subir DAGs (en `airflow/dags`) o plugins, etc.
 
-1. **Instalar Poetry**:
-   ```bash
-   # En Windows (PowerShell)
-   (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
-   
-   # O usando pip
-   pip install poetry
-   ```
+# Crear los directorios necesarios
+mkdir -p airflow/{dags,logs,config,plugins,secrets}
 
-2. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/carlosrivasa/tpAdM.git
-   cd tpAdM
-   ```
+# Iniciar los servicios
+docker-compose --profile all up -d 
 
-3. **Instalar las dependencias**:
-   ```bash
-   poetry install
-   ```
+# OPTCIONAL: En caso de falla en airflow, ejecutar:
+docker-compose down
+docker rmi extending_airflow:latest
+docker-compose --profile all build --no-cache
+# y de nuevo
+docker-compose --profile all up -d
 
-4. **Activar el entorno virtual**:
-   ```bash
-   poetry shell
-   ```
+# Probar los servicios
+Airflow: http://localhost:8080 (user: airflow, password: airflow)
+MinIO: http://localhost:9001 (access key: minio, secret key: minio123)
+MLflow: http://localhost:5050
+FastAPI: http://localhost:8800
 
-## Usando pip (Alternativo)
+# OPCIONAL: ver logs para troubleshooting, por ejemplo hay alguna falla en mlflow
+docker logs mlflow
 
-1. **Crear un entorno virtual**:
-   ```bash
-   python -m venv venv
-   # En Windows
-   .\venv\Scripts\activate
-   # En Linux/Mac
-   source venv/bin/activate
-   ```
+# Importante a continuación:
+Entrar a MinIO y subir el archivo archives/results.csv en el bucket data, carpeta "datasets"
+También se crean en el bucket data las carpetas output y processed  
 
-2. **Instalar las dependencias**:
-   ```bash
-   pip install -e .
-   ```
-
-## Ejecutar Jupyter Lab
-
-Una vez instalado el entorno, se puede ejecutar Jupyter Lab para trabajar con los notebooks:
-
-```bash
-# Con Poetry
-poetry run jupyter lab
-
-# Con pip (entorno virtual activado)
-jupyter lab
-```
-
-## Componentes
+## Componentes dentro de airflow
 
 Con el objetivo de realizar el despliegue, el código está dividido en los siguientes componentes:
 
-- `refactor/etl.py`: ETL para cargar y preprocesar los datos.
-- `refactor/train_model.py`: Entrenamiento del modelo.
-- `refactor/test_model.py`: Testeo del modelo.
+- `airflow/dags/etl_pipeline.py`: Dag con el Pipeline de ETL en interacción con MLflow y MinIO.
+- `airflow/dags/refactor/etl.py`: ETL para leer el dataset desde s3 y preprocesar los datos, deja los archivos preprocesados en el bucket data, carpeta "preprocessed".
 
-```bash
-# Con Poetry
-poetry run refactor/etl.py
-poetry run refactor/train_model.py
-poetry run refactor/test_model.py
-```
+# WIP 
+- `airflow/dags/refactor/train_model.py`: Entrenamiento del modelo, se contempla usar como parte de siguientes pasos.
+
+# WIP
+- `airflow/dags/refactor/test_model.py`: Testeo del modelo, se contempla usar como parte de siguientes pasos.
+
