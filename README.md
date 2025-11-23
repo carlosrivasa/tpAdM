@@ -28,7 +28,6 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 - Scikit-Learn
 
 # Instalación del entorno
-
 Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el de tu usuario o alguno que consideres oportuno (para encontrar el UID, usa el comando `id -u <username>`). De lo contrario, Airflow dejará sus carpetas internas como root y no podrás subir DAGs (en `airflow/dags`) o plugins, etc.
 
 # Crear los directorios necesarios
@@ -37,7 +36,7 @@ mkdir -p airflow/{dags,logs,config,plugins,secrets}
 # Iniciar los servicios
 docker-compose --profile all up -d 
 
-# OPTCIONAL: En caso de falla en airflow, ejecutar:
+# OPCIONAL: En caso de falla en airflow, ejecutar:
 docker-compose down
 docker rmi extending_airflow:latest
 docker-compose --profile all build --no-cache
