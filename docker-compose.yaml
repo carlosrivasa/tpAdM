@@ -203,7 +203,7 @@ services:
       --host 0.0.0.0
       --port 8800
     healthcheck:
-      test: curl --include --request GET http://fastapi:8800/ || exit 1
+      test: ["CMD", "curl", "-f", "http://localhost:8800/health"]
       interval: 60s
       timeout: 10s
       start_period: 120s
