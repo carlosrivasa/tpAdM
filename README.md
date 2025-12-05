@@ -21,7 +21,7 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 <br>
 
 # Requerimientos
-- Docker, Airflow, MLflow, MinIO, FastAPI, Redis, 
+- Docker, el cual instala imágenes de Airflow, MLflow, MinIO, FastAPI, Redis. 
 - Python >=3.11,<3.13 (requerido por vizdoom)  
 - Numpy, Pandas, SciPy
 - Matplotlib, Seaborn
@@ -31,28 +31,29 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el de tu usuario o alguno que consideres oportuno (para encontrar el UID, usa el comando `id -u <username>`). De lo contrario, Airflow dejará sus carpetas internas como root y no podrás subir DAGs (en `airflow/dags`) o plugins, etc.
 
 # Crear los directorios necesarios
-mkdir -p airflow/{dags,logs,config,plugins,secrets}
+`mkdir -p airflow/{dags,logs,config,plugins,secrets}`
 
 # Iniciar los servicios
-docker-compose --profile all up -d 
+`docker-compose --profile all up -d`
 
-# OPCIONAL: En caso de falla en airflow, ejecutar:
-docker-compose down
-docker rmi extending_airflow:latest
-docker-compose --profile all build --no-cache
-# y de nuevo
-docker-compose --profile all up -d
+### OPCIONAL: En caso de falla en airflow, ejecutar:
+`docker-compose down`
+`docker rmi extending_airflow:latest`
+`docker-compose --profile all build --no-cache`
+#### y de nuevo
+`docker-compose --profile all up -d`
 
 # Probar los servicios
-Airflow: http://localhost:8080 (user: airflow, password: airflow)
-MinIO: http://localhost:9001 (access key: minio, secret key: minio123)
-MLflow: http://localhost:5050
-FastAPI: http://localhost:8800
+- Airflow: http://localhost:8080 (user: airflow, password: airflow)
+- MinIO: http://localhost:9001 (access key: minio, secret key: minio123)
+- MLflow: http://localhost:5050
+- FastAPI: http://localhost:8800
 
-# OPCIONAL: ver logs para troubleshooting, por ejemplo hay alguna falla en mlflow
+### OPCIONAL: 
+ver logs para troubleshooting, por ejemplo hay alguna falla en mlflow
 docker logs mlflow
 
-# Importante a continuación:
+### Importante a continuación:
 Entrar a MinIO y subir el archivo archives/results.csv en el bucket data, carpeta "datasets"
 También se crean en el bucket data las carpetas output y processed  
 
@@ -62,10 +63,6 @@ Con el objetivo de realizar el despliegue, el código está dividido en los sigu
 
 - `airflow/dags/etl_pipeline.py`: Dag con el Pipeline de ETL en interacción con MLflow y MinIO.
 - `airflow/dags/refactor/etl.py`: ETL para leer el dataset desde s3 y preprocesar los datos, deja los archivos preprocesados en el bucket data, carpeta "preprocessed".
-
-# WIP 
-- `airflow/dags/refactor/train_model.py`: Entrenamiento del modelo, se contempla usar como parte de siguientes pasos.
-
-# WIP
-- `airflow/dags/refactor/test_model.py`: Testeo del modelo, se contempla usar como parte de siguientes pasos.
+- `airflow/dags/train_model_pipeline.py`: Dag con el Pipeline de Train, búsqueda de hiperparámetros y validación del modelo.
+- `airflow/dags/refactor/train_test_model.py`: Entrenamiento del modelo, búsqueda de hiperparámetros mediante un experimento de MLFlow y validación.
 
