@@ -112,6 +112,7 @@ def preprocess_features(results: pd.DataFrame, min_year: int = MIN_YEAR) -> pd.D
 
     # Calcular ranking ELO
     elo_df = compute_elo_features(results)
+    save_df_to_s3(elo_df, "data", "processed/elo_ratings.csv")
     results_with_rating = results.merge(
         elo_df, on=["date", "home_team", "away_team"], how="left"
     )
@@ -166,21 +167,27 @@ def make_dummies_variables(
 
     # Copiar el dataset para evitar modificar el original
     encoded_data = dataset.copy()
-    
-    # Inicializar el target encoder
-    encoder = ce.TargetEncoder(handle_missing='value', handle_unknown='value')
+    encoders = {}
     
     # Aplicar target encoding a las columnas categóricas
     for col in categories_list:
         if col in encoded_data.columns:
+            encoder = ce.TargetEncoder(handle_missing='value', handle_unknown='value')
             encoded_data[col] = encoder.fit_transform(encoded_data[col], encoded_data[target_column])
+            encoders[col] = encoder
     
-    # Log de las nuevas columnas
-    content = "New columns after target encoding:\n" + "\n".join(encoded_data.columns.tolist())
-    save_text_to_s3(content, "data", "output/log_columns_dummies.txt")
+    # Encoders de las nuevas columnas
+    # Save encoders to MLflow
+    if mlflow.active_run():
+        for col, encoder in encoders.items():
+            with mlflow.start_run(nested=True):
+                mlflow.sklearn.log_model(
+                    sk_model=encoder,
+                    name=f"fifa_win_nowin_match_predict_{col}_encoder",
+                    registered_model_name=f"fifa_win_nowin_match_predict_{col}_encoder",
+                )
     
     return encoded_data
-
 
 def split_dataset(
     dataset: pd.DataFrame,
@@ -240,9 +247,18 @@ def standardize_inputs(X_train: pd.DataFrame, X_test: pd.DataFrame) -> tuple:
     
     X_train_scaled[numeric_columns] = scaler.fit_transform(X_train[numeric_columns])
     X_test_scaled[numeric_columns] = scaler.transform(X_test[numeric_columns])
-    
-    return X_train_scaled, X_test_scaled
 
+    # Save scaler to MLflow
+    if mlflow.active_run():
+        with mlflow.start_run(nested=True):
+            mlflow.sklearn.log_model(
+                sk_model=scaler,
+                name="fifa_win_nowin_match_predict_standard_scaler",
+                registered_model_name="fifa_win_nowin_match_predict_standard_scaler",
+            )
+            mlflow.log_dict({"numeric_columns": numeric_columns.tolist()}, "scalers/numeric_columns.json")
+                
+    return X_train_scaled, X_test_scaled
 
 def elo_expect(Ra, Rb, home_adv):
     return 1.0 / (1.0 + 10.0 ** ((Rb - (Ra + home_adv)) / 400.0))

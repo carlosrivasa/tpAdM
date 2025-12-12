@@ -1,2 +1,12 @@
-fastapi>=0.116
-uvicorn>=0.27
+fastapi
+uvicorn
+mlflow
+pandas==2.1.4
+numpy==1.26.4
+scikit-learn==1.6.1
+scipy==1.15.3
+psutil==7.0.0
+python-multipart
+boto3
+category-encoders
+pyarrow
