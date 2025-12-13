@@ -1,9 +1,4 @@
 # Arquitectura del Proyecto - MLOps
-
-```
->> Work in progress <<
-```
-
 Este documento describe los componentes principales de la plataforma y el flujo de trabajo que conecta orquestación, experimentación y modelado, almacenamiento y predicción.
 
 La arquitectura se basa en cuatro pilares:
@@ -76,4 +71,4 @@ Se encarga de exponer una API de inferencia para que usuarios y aplicaciones ext
 
 - Servidor API en puerto 8800.
 - Carga modelos directamente desde MinIO o desde el registry de MLflow.
-- Ofrece endpoints típicos como `/predict`, `/health`, `/model-info`
+- Ofrece endpoints típicos como `/predict`, `/health` y otras utilidades.
