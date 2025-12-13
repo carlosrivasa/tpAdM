@@ -125,6 +125,8 @@ services:
   create_s3_buckets:
     image: minio/mc:latest
     container_name: minio_create_bucket
+    volumes:
+      - ./dataset:/dataset
     profiles:
       - mlflow
       - airflow
@@ -139,6 +141,7 @@ services:
       /usr/bin/mc alias set s3 http://s3:9000 ${MINIO_ACCESS_KEY:-minio} ${MINIO_SECRET_ACCESS_KEY:-minio123};
       /usr/bin/mc mb s3/${MLFLOW_BUCKET_NAME:-mlflow};
       /usr/bin/mc mb s3/${DATA_REPO_BUCKET_NAME:-data};
+      /usr/bin/mc cp ./dataset/results.csv s3/${DATA_REPO_BUCKET_NAME:-data}/datasets/results.csv;
       exit 0;
       '
 
