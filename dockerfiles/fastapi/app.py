@@ -36,9 +36,16 @@ class MatchRequest(BaseModel):
     @field_validator('tournament')
     @classmethod
     def validate_tournament(cls, v):
-        valid_tournaments = {'fifa world cup', 'fifa world cup qualification'}
-        if v.lower() not in valid_tournaments:
-            raise ValueError(f'Tournament "{v}" must be one of: {valid_tournaments}')
+        valid_tournaments = {
+            'FIFA World Cup qualification',
+            'UEFA Euro qualification',
+            'UEFA Euro',
+            'FIFA World Cup',
+            'Copa América',
+            'UEFA Nations League'
+        }
+        if v not in valid_tournaments:
+            raise ValueError(f'Tournament "{v}" must be one of: {", ".join(valid_tournaments)}')
         return v
     
     @model_validator(mode='after')
