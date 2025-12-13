@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 import mlflow
 import pandas as pd
 from datetime import date
@@ -24,6 +24,28 @@ class MatchRequest(BaseModel):
     tournament: str
     neutral: bool
     date: date
+    
+    @field_validator('home_team', 'away_team')
+    @classmethod
+    def validate_team(cls, v):
+        valid_teams = set(utils.results_df['home_team'].unique())
+        if v not in valid_teams:
+            raise ValueError(f'Team "{v}" not found in valid teams')
+        return v
+    
+    @field_validator('tournament')
+    @classmethod
+    def validate_tournament(cls, v):
+        valid_tournaments = {'fifa world cup', 'fifa world cup qualification'}
+        if v.lower() not in valid_tournaments:
+            raise ValueError(f'Tournament "{v}" must be one of: {valid_tournaments}')
+        return v
+    
+    @model_validator(mode='after')
+    def validate_different_teams(self):
+        if self.home_team == self.away_team:
+            raise ValueError('home_team and away_team must be different')
+        return self
 
 
 # Cargar el modelo al iniciar la aplicación
