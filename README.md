@@ -16,7 +16,15 @@ Este repositorio contiene el material de resolución del trabajo práctico final
 - [SIU a2214] Alex Martín Curellich <alexcurellich@gmail.com>
 
 ## Pase a producción de un modelo de predicciones (win no win) de partidos de futbol de selecciones nacionales
-- [FIFA2026_win_nowin.ipynb](notebook_examples/FIFA2026_win_nowin.ipynb) - Predicciones definitivas
+
+En este trabajo, mostramos una implementación de un modelo productivo para detectar el resultado de partidos de futbol de selecciones nacionales, utilizando el servicio de ML de ⭐⭐⭐ El Champion 🏆 Inc. Para ello, obtenemos los datos de los partidos históricos de las selecciones nacionales de la FIFA de [Kaggle](https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017/data). (Vale mencionar que El experimento del entrenamiento inicial está disponible en el siguiente notebook: [FIFA2026_win_nowin.ipynb](notebook_examples/FIFA2026_win_nowin.ipynb))
+
+
+La implementación incluye principalmente:
+
+- DAGs de ETL y entrenamiento en apache Airflow.
+- Experimentos de MLFlow para la búsqueda de hiperparámetros, registro Y versionado de modelos y métricas.
+- Un servicio de API del modelo, que toma el artefacto de MLflow y lo expone para realizar predicciones.
 
 <br>
 
@@ -72,7 +80,7 @@ El orden de ejecución es:
 2. `train_model_pipeline` - Realiza el entrenamiento del modelo, búsqueda de hiperparámetros y validación, registrando los resultados en MLflow.
 
 ### Importante 2: FastAPI
-Existen casos en los que FastAPI no se buildea correctamente en el primer intento. En caso de que al acceder a la API no se obtengan respuestas del endpoint `/predict`, se recomienda  destruir y luego reconstruir la imagen de FastAPI con los siguientes comandos:
+Es prerequisito ejecutar los DAGs de Airflow para que se realicen las tareas de ETL y entrenamiento del modelo. En caso de que al acceder a la API no se obtengan respuestas del endpoint `/predict`, se recomienda verificar que los DAGs se ejecuten corréctamente, y entonces destruir y luego reconstruir la imagen de FastAPI con los siguientes comandos:
 `docker-compose down fastapi`
 `docker-compose build --no-cache fastapi`
 `docker-compose up -d fastapi`
@@ -98,3 +106,42 @@ El sistema está compuesto por los siguientes módulos principales:
 <br>
 
 Para más detalles, ver [docs/architecture.md](docs/architecture.md)
+
+# API
+
+Podemos realizar predicciones utilizando la API, accediendo a http://localhost:8800/docs.
+
+Para hacer una predicción, debemos enviar una solicitud al endpoint Predict con un cuerpo de tipo JSON que contenga un campo de características (features) con cada entrada para el modelo.
+
+Un ejemplo utilizando curl sería:
+
+```bash
+curl -X 'POST' \
+  'http://localhost:8800/predict' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+  "home_team": "Argentina",
+  "away_team": "Brazil",
+  "tournament": "FIFA World Cup",
+  "neutral": false,
+  "date": "2026-07-19"
+}'
+```
+
+La respuesta del modelo será un valor booleano con la predicción de la victoria del equipo local y los valores de las probabilidades de victoria y no victoria del equipo local.
+
+```json
+{
+  "home_team":"Argentina",
+  "away_team":"Brazil",
+  "home_team_win":true,
+  "probability_home_win":0.5607981562813514,
+  "probability_nome_nowin":0.4392018437186488
+}
+```
+Para obtener más detalles sobre la API, ingresa a http://localhost:8800/docs.
+
+Nota: Recuerda que si esto se ejecuta en un servidor diferente a tu computadora, debes reemplazar localhost por la IP correspondiente o el dominio DNS, si corresponde.
+
+La forma en que se implementó tiene la desventaja de que solo se puede hacer una predicción a la vez, pero tiene el potencial de ser usado para predecir torneos según los partidos que están programados.
