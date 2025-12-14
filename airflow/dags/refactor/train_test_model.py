@@ -75,7 +75,6 @@ def train_test_model(X_train: pd.DataFrame, y_train: np.ndarray,
         y_pred = model.predict(X_test)
         test_metrics = log_metrics(y_test, y_pred, "test_")
         logger.info(f"Test metrics: {test_metrics}")
-        log_metrics(y_test, y_pred, "test_")
         
         # Log model
         signature = infer_signature(X_train, y_pred)
@@ -158,6 +157,40 @@ def hyperparameter_search(
         
         return best_params, best_model  # Devolvemos ambos
 
+
+def challenge_models(X_test, y_test):
+    """
+    Compara el último modelo entrenado con el mejor modelo. Sí el
+    modelo es mejor, se asigna como el nuevo champion.
+    """
+    name = "fifa_win_nowin_match_predict"
+    client = mlflow.MlflowClient()
+
+    try:
+        model_data = client.get_model_version_by_alias(name, "champion")
+        champion_model = mlflow.sklearn.load_model(model_data.source)
+
+        challenger_model_data = client.get_model_version_by_alias(name, "latest")
+        challenger_model = mlflow.sklearn.load_model(challenger_model_data.source)
+
+        y_pred_champion = champion_model.predict(X_test)
+        f1_score_champion = f1_score(y_test, y_pred_champion)
+
+        y_pred_challenger = challenger_model.predict(X_test)
+        f1_score_challenger = f1_score(y_test, y_pred_challenger)
+
+        if f1_score_challenger > f1_score_champion:
+            client.delete_registered_model_alias(name, "champion")
+            client.set_registered_model_alias(name, "champion", challenger_model_data.version)
+
+            logger.info(f"Nuevo modelo champion actualizado a la version: {challenger_model_data.version}")
+
+    except Exception as e:
+        logger.error(f"No existe el champion model: {str(e)}")
+        model_data = client.get_model_version_by_alias(name, "latest")
+        client.set_registered_model_alias(name, "champion", model_data.version)
+
+
 def main():
     """Main function to run the training and evaluation pipeline."""
     try:
@@ -205,6 +238,8 @@ def main():
             params=best_params,
             run_name="train_test_run"
         )
+
+        challenge_models(X_test, y_test)
         
         logger.info(f"Training and evaluation completed! MLflow Run ID: {run_id}")
         
