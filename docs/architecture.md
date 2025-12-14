@@ -6,6 +6,7 @@ La arquitectura se basa en cuatro pilares:
 2. Modelado (MLflow)
 3. Almacenamiento (PostgreSQL + MinIO)
 4. Predicción (FastAPI)
+5. UI (Streamlit)
 
 ## Diagrama de Arquitectura
 ![Diagrama de Arquitectura](./img/mlops-architecture.png)
@@ -72,3 +73,12 @@ Se encarga de exponer una API de inferencia para que usuarios y aplicaciones ext
 - Servidor API en puerto 8800.
 - Carga modelos directamente desde MinIO o desde el registry de MLflow.
 - Ofrece endpoints típicos como `/predict`, `/health` y otras utilidades.
+<br>
+<br>
+
+### UI (Streamlit)
+**Streamlit**<br>
+Expone una interfaz gráfica para realizar pruebas por usuarios. Es util para un prototipado rápido.
+
+- UI en puerto 8501
+- Se comunica con el backend (FastAPI)
