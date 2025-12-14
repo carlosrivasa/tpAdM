@@ -47,7 +47,7 @@ x-airflow-common: &airflow-common
     - frontend
     - backend
   user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
-  depends_on:  &airflow-common-depends-on
+  depends_on: &airflow-common-depends-on
     postgres:
       condition: service_healthy
     redis:
@@ -212,6 +212,21 @@ services:
       start_period: 120s
       retries: 3
 
+  streamlit:
+    build: ./ui
+    image: frontend_streamlit
+    container_name: streamlit
+    restart: always
+    ports:
+      - "${STREAMLIT_PORT:-8501}:8501"
+    environment:
+      - API_URL=http://fastapi:8800
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - frontend
+
   airflow-apiserver:
     <<: *airflow-common
     container_name: airflow-apiserver
@@ -259,7 +274,7 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
-  
+
   airflow-worker:
     <<: *airflow-common
     command: celery worker
@@ -283,7 +298,7 @@ services:
       airflow-apiserver:
         condition: service_healthy
       airflow-init:
-        condition: service_completed_successfully       
+        condition: service_completed_successfully
 
   airflow-triggerer:
     <<: *airflow-common
