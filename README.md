@@ -57,6 +57,10 @@ docker-compose --profile all build --no-cache
 # y de nuevo
 docker-compose --profile all up -d
 ```
+
+# Apagar los servicios
+`docker compose --profile all down`
+
 <br>
 
 # Probar los servicios
