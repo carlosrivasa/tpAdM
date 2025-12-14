@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report
-from sklearn.model_selection import train_test_split, ParameterGrid
+from sklearn.model_selection import train_test_split, RandomizedSearchCV
 import mlflow
 from mlflow.models.signature import infer_signature
 import logging
@@ -110,9 +110,8 @@ def setup_mlflow(experiment_name="fifa_match_hp_search_train_test"):
 def hyperparameter_search(
     X_train: pd.DataFrame, 
     y_train: np.ndarray,
-    X_val: pd.DataFrame,
-    y_val: np.ndarray,
-    run_name: str = "hp_search") -> Tuple[Dict[str, Any], RandomForestClassifier]:
+    run_name: str = "hp_search"
+) -> Tuple[Dict[str, Any], RandomForestClassifier]:
     """Perform hyperparameter search and return best parameters and model."""
 
     param_grid = {
@@ -122,40 +121,40 @@ def hyperparameter_search(
         'min_samples_leaf': [2, 3, 4],
         'criterion': ['gini', 'entropy']
     }
-    
+
     best_model = None
-    best_score = -1
     best_params = None
     
     with mlflow.start_run(run_name=run_name):
         mlflow.log_params({"param_grid": str(param_grid)})
-        
-        for params in ParameterGrid(param_grid):
-            with mlflow.start_run(nested=True, run_name=f"trial_{len(mlflow.search_runs())+1}"):
-                model = RandomForestClassifier(**params, class_weight='balanced_subsample', random_state=42, n_jobs=-1)
-                model.fit(X_train, y_train)
-                
-                y_pred = model.predict(X_val)
-                score = f1_score(y_val, y_pred)
-                
-                mlflow.log_params(params)
-                mlflow.log_metric("val_f1", score)
-                
-                if score > best_score:
-                    best_score = score
-                    best_params = params.copy()
-                    best_model = model  # Guardamos el modelo
-                    best_params.update({
-                        'random_state': 42,
-                        'n_jobs': -1,
-                        'class_weight': 'balanced_subsample'
-                    })
-        
-        # Log final
+
+        model = RandomForestClassifier(random_state=42, class_weight='balanced_subsample')
+
+        search = RandomizedSearchCV(
+            estimator=model,
+            param_distributions=param_grid,
+            scoring='f1',
+            cv=3,
+            n_iter=30,
+            verbose=2,
+            n_jobs=-1,
+            random_state=42
+        )
+
+        search.fit(X_train, y_train)
+
+        best_model = search.best_estimator_
+        best_params = search.best_params_
+        best_params.update({
+            'class_weight': 'balanced_subsample',
+            'random_state': 42,
+            'n_jobs': -1
+        })
+
         mlflow.log_params({f"best_{k}": v for k, v in best_params.items()})
-        mlflow.log_metric("best_val_f1", best_score)
+        mlflow.log_metric("best_f1", search.best_score_)
         
-        return best_params, best_model  # Devolvemos ambos
+    return best_params, best_model  # Devolvemos ambos
 
 
 def challenge_models(X_test, y_test):
@@ -208,13 +207,7 @@ def main():
         # Load training data
         logger.info("Loading training data from S3...")
         X_train_full, y_train_full = load_data_from_s3(bucket, x_train_key, y_train_key)
-        
-        X_train, X_val, y_train, y_val = train_test_split(
-            X_train_full, y_train_full, 
-            test_size=0.2,  # 20% for validation
-            random_state=42,
-            stratify=y_train_full  # Maintain class distribution
-        )
+
         # Load test data
         logger.info("Loading test data from S3...")
         X_test, y_test = load_data_from_s3(bucket, x_test_key, y_test_key)
@@ -222,10 +215,8 @@ def main():
         # Train models and return the best one
         logger.info("Starting hyperparameter and model search...")
         best_params, _ = hyperparameter_search(
-            X_train=X_train,
-            y_train=y_train,
-            X_val=X_val,
-            y_val=y_val,
+            X_train=X_train_full,
+            y_train=y_train_full,
             run_name="hp_search"
         )
 
