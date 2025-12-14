@@ -25,6 +25,7 @@ La implementación incluye principalmente:
 - DAGs de ETL y entrenamiento en apache Airflow.
 - Experimentos de MLFlow para la búsqueda de hiperparámetros, registro Y versionado de modelos y métricas.
 - Un servicio de API del modelo, que toma el artefacto de MLflow y lo expone para realizar predicciones.
+- Una UI desarrollado con Streamlit
 
 <br>
 
@@ -49,12 +50,13 @@ Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el
 `docker-compose --profile all up -d`
 
 ### OPCIONAL: En caso de falla en airflow, ejecutar:
-`docker-compose down`
-`docker rmi extending_airflow:latest`
-`docker-compose --profile all build --no-cache`
-#### y de nuevo
-`docker-compose --profile all up -d`
-
+```bash
+docker-compose down
+docker rmi extending_airflow:latest
+docker-compose --profile all build --no-cache
+# y de nuevo
+docker-compose --profile all up -d
+```
 <br>
 
 # Probar los servicios
@@ -62,15 +64,16 @@ Si estás en Linux o MacOS, en el archivo `.env`, reemplaza `AIRFLOW_UID` por el
 - MinIO: http://localhost:9001 (access key: minio, secret key: minio123)
 - MLflow: http://localhost:5050
 - FastAPI: http://localhost:8800
+- Streamlit: http://localhost:8501
 
 ## Troubleshooting
 Para diagnosticar problemas en los servicios, consulta los logs correspondientes:
-
 ```bash
 docker logs mlflow      # MLflow
 docker logs airflow-webserver  # Airflow
 docker logs fastapi     # FastAPI
 docker logs minio       # MinIO
+docker logs streamlit   # Streamlit
 ```
 
 ### Importante: Airflow
@@ -81,9 +84,11 @@ El orden de ejecución es:
 
 ### Importante 2: FastAPI
 Es prerequisito ejecutar los DAGs de Airflow para que se realicen las tareas de ETL y entrenamiento del modelo. En caso de que al acceder a la API no se obtengan respuestas del endpoint `/predict`, se recomienda verificar que los DAGs se ejecuten corréctamente, y entonces destruir y luego reconstruir la imagen de FastAPI con los siguientes comandos:
-`docker-compose down fastapi`
-`docker-compose build --no-cache fastapi`
-`docker-compose up -d fastapi`
+```bash
+docker-compose down fastapi
+docker-compose build --no-cache fastapi
+docker-compose up -d fastapi
+```
 
 <br>
 
