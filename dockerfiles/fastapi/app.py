@@ -5,7 +5,7 @@ import mlflow
 import pandas as pd
 from datetime import date as date_type
 import logging
-from utils import load_components, get_elo_rating_diff
+from utils import get_elo_rating_diff
 import utils
 
 # Configuración de logging
@@ -77,12 +77,11 @@ class MatchRequest(BaseModel):
         return self
 
 
-# Cargar el modelo al iniciar la aplicación
+# Configurar MLflow al iniciar la aplicación
 @app.on_event("startup")
 async def startup_event():
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    if not load_components():
-        raise RuntimeError("Failed to load one or more components")
+    logger.info("MLflow tracking URI set to %s", MLFLOW_TRACKING_URI)
 
 
 @app.get("/")
@@ -202,13 +201,22 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
             logger.error(f"Error preparing features: {str(e)}")
             raise HTTPException(status_code=400, detail="Invalid Request")
 
+        # Ensure components are loaded before using them
+        if not all(col in utils.encoders for col in ['home_team', 'away_team', 'tournament']):
+            logger.error("Required encoders not loaded")
+            raise HTTPException(status_code=503, detail="Service components not ready")
+            
         # Apply target encoding with better error handling
         for col in ['home_team', 'away_team', 'tournament']:
             df[col] = utils.encoders[col].transform(df[col])
         
         # Scale numeric features
+        if utils.scaler is None or not hasattr(utils, 'numeric_columns'):
+            logger.error("Scaler or numeric columns not loaded")
+            raise HTTPException(status_code=503, detail="Service unavailable")
+            
         df[utils.numeric_columns] = utils.scaler.transform(df[utils.numeric_columns])
-        
+    
         predictions = utils.model.predict(df)
         predictions_proba = utils.model.predict_proba(df)
 

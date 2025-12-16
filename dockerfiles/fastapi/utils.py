@@ -16,15 +16,19 @@ results_df = None
 
 
 def load_components():
-    """Load all ML components (model, encoders, scaler) and data from MLflow and S3"""
+    """Lazy load all ML components (model, encoders, scaler) and data from MLflow and S3"""
     global model, encoders, scaler, numeric_columns, elo_df, results_df
     
+    # Only load components if they haven't been loaded yet
+    if model is not None and encoders and scaler is not None and elo_df is not None and results_df is not None:
+        return True
+        
     try:
+        logger.info("Loading ML components...")
         # Load model
         client = mlflow.MlflowClient()
         model_data = client.get_model_version_by_alias("fifa_win_nowin_match_predict", "champion")
         model = mlflow.sklearn.load_model(model_data.source)
-
         logger.info(f"Loaded model version: {model_data.version}")
         
         # Load encoders
