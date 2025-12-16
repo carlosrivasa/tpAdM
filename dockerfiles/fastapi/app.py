@@ -5,7 +5,7 @@ import mlflow
 import pandas as pd
 from datetime import date as date_type
 import logging
-from utils import get_elo_rating_diff
+from utils import load_components, get_elo_rating_diff
 import utils
 
 # Configuración de logging
@@ -116,6 +116,12 @@ def read_root():
     }
 )
 def get_teams():
+    if not load_components():
+            logger.error("Failed to load ML components")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service components failed to load"
+            )
     try:
         teams = sorted(utils.results_df['home_team'].unique().tolist())
         return {"teams": teams}
@@ -175,6 +181,12 @@ def get_teams():
     }
 )
 async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]]:
+    if not load_components():
+            logger.error("Failed to load ML components")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service components failed to load"
+            )
     try:
         # Calculate ELO ratings
         rating_diff = get_elo_rating_diff(
@@ -241,7 +253,7 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
     "/health",
     response_model=Dict[str, str],
     summary="Verificar estado del servicio",
-    description="Verifica que el servicio esté funcionando correctamente y el modelo esté cargado",
+    description="Verifica que el servicio esté funcionando correctamente",
     responses={
         200: {
             "description": "Servicio funcionando correctamente",
@@ -249,37 +261,20 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "model": "win_nowin_fifa_match_predict"
+                        "service": "running"
                     }
-                }
-            }
-        },
-        500: {
-            "description": "Error en el servicio",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Modelo no cargado"}
                 }
             }
         }
     }
 )
 async def health_check():
-    """Verifica el estado de salud del servicio.
+    """Verifica el estado básico del servicio.
     
     Returns:
-        Dict: Estado del servicio y nombre del modelo cargado
+        Dict: Estado del servicio
     """
-    try:
-        if utils.model is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Modelo no cargado"
-            )
-        return {"status": "healthy", "model": MODEL_NAME}
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error en el servicio"
-        )
+    return {
+        "status": "healthy",
+        "service": "running"
+    }
