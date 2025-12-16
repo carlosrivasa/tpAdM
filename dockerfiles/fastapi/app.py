@@ -77,12 +77,11 @@ class MatchRequest(BaseModel):
         return self
 
 
-# Cargar el modelo al iniciar la aplicación
+# Configurar MLflow al iniciar la aplicación
 @app.on_event("startup")
 async def startup_event():
     mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-    if not load_components():
-        raise RuntimeError("Failed to load one or more components")
+    logger.info("MLflow tracking URI set to %s", MLFLOW_TRACKING_URI)
 
 
 @app.get("/")
@@ -117,6 +116,12 @@ def read_root():
     }
 )
 def get_teams():
+    if not load_components():
+            logger.error("Failed to load ML components")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service components failed to load"
+            )
     try:
         teams = sorted(utils.results_df['home_team'].unique().tolist())
         return {"teams": teams}
@@ -176,6 +181,12 @@ def get_teams():
     }
 )
 async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]]:
+    if not load_components():
+            logger.error("Failed to load ML components")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service components failed to load"
+            )
     try:
         # Calculate ELO ratings
         rating_diff = get_elo_rating_diff(
@@ -202,13 +213,22 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
             logger.error(f"Error preparing features: {str(e)}")
             raise HTTPException(status_code=400, detail="Invalid Request")
 
+        # Ensure components are loaded before using them
+        if not all(col in utils.encoders for col in ['home_team', 'away_team', 'tournament']):
+            logger.error("Required encoders not loaded")
+            raise HTTPException(status_code=503, detail="Service components not ready")
+            
         # Apply target encoding with better error handling
         for col in ['home_team', 'away_team', 'tournament']:
             df[col] = utils.encoders[col].transform(df[col])
         
         # Scale numeric features
+        if utils.scaler is None or not hasattr(utils, 'numeric_columns'):
+            logger.error("Scaler or numeric columns not loaded")
+            raise HTTPException(status_code=503, detail="Service unavailable")
+            
         df[utils.numeric_columns] = utils.scaler.transform(df[utils.numeric_columns])
-        
+    
         predictions = utils.model.predict(df)
         predictions_proba = utils.model.predict_proba(df)
 
@@ -233,7 +253,7 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
     "/health",
     response_model=Dict[str, str],
     summary="Verificar estado del servicio",
-    description="Verifica que el servicio esté funcionando correctamente y el modelo esté cargado",
+    description="Verifica que el servicio esté funcionando correctamente",
     responses={
         200: {
             "description": "Servicio funcionando correctamente",
@@ -241,37 +261,20 @@ async def predict(match_data: MatchRequest) -> Dict[str, Union[str, bool, float]
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "model": "win_nowin_fifa_match_predict"
+                        "service": "running"
                     }
-                }
-            }
-        },
-        500: {
-            "description": "Error en el servicio",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Modelo no cargado"}
                 }
             }
         }
     }
 )
 async def health_check():
-    """Verifica el estado de salud del servicio.
+    """Verifica el estado básico del servicio.
     
     Returns:
-        Dict: Estado del servicio y nombre del modelo cargado
+        Dict: Estado del servicio
     """
-    try:
-        if utils.model is None:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Modelo no cargado"
-            )
-        return {"status": "healthy", "model": MODEL_NAME}
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error en el servicio"
-        )
+    return {
+        "status": "healthy",
+        "service": "running"
+    }

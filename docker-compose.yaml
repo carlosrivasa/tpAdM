@@ -216,6 +216,8 @@ services:
     build: ./ui
     image: frontend_streamlit
     container_name: streamlit
+    profiles:
+      - all
     restart: always
     ports:
       - "${STREAMLIT_PORT:-8501}:8501"
